@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!-- http://www.comscigate.com/ant/A_beginners_guide_to_Ant.htm - build file for lesson 1 -->
+
+<project name="qth_parser" default="build" basedir=".">
+    <target name="build">
+        <javac srcdir="." />
+    </target>
+</project>

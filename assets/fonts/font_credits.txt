@@ -1,0 +1,11 @@
+Arabic font used
+----------------
+Thanks to "ahmedre" for providing "DroidSansArabic.ttf" which proves to be a clear/working arabic font that doesnt skip or get squeezed as the various others tried on Android...
+URL: https://github.com/ahmedre/quran_android/tree/master/app/assets
+
+Thai font used
+--------------
+Credit to the developers who made the "Waree" font. It provides fonts from the National Font Project (Kinnari, Garuda, Norasi), UI font from NECTEC (Loma) and several developed by TLWG and its contributors.
+More info: http://packages.ubuntu.com/lucid/ttf-thai-tlwg
+Path: Ubuntu 10.04 (64-bits) -> /usr/share/fonts/truetype/thai/Waree.ttf
+

@@ -1,6 +1,7 @@
 package com.clearevo.quran_thai;
 
 import com.clearevo.quran_thai.R;
+import java.io.*;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -26,15 +27,19 @@ import android.widget.TextSwitcher;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewSwitcher;
+import android.graphics.Typeface;
+import android.util.TypedValue;
+import android.util.Log;
+import android.content.Intent;
 
-//TODO: add arabic, search, toast about how to use GOTO option in settings to jump to chapter, verse
+//TODO: add search, toast about how to use GOTO option in settings to jump to chapter, verse
 
 //image resize cmd example: convert -resize 96x96 qth.png ../drawable-xhdpi/ic_launcher.png
 
 public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFactory,
         View.OnClickListener, OnTouchListener {
 
-	public static final String MENU_GOTO_STR = "ข้ามไปวรรคที่...";
+	public static final String MENU_GOTO_STR = "ข้ามไปซูเราะห์อื่น...";
 	
 	final int DIALOG_GOTO_ID = 0;
 	
@@ -127,8 +132,13 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
 
     private int mCounter = 0;
     
-    VerseLoader g_vl;
+    VerseLoader g_vl_ar;//arabic
+    VerseLoader g_vl_th;//thai
+
     TextView g_view;
+    Typeface face_ar;
+    Typeface face_th;
+
     ScrollView sv;
     LinearLayout ll;
     
@@ -138,15 +148,56 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     int g_prevc = 1;
     int g_prevv = 1;
     
-    static int NVERSEPERPAGE = 20;
+    static int NVERSEPERPAGE = 12;
     
     @Override
 	protected void onSaveInstanceState(Bundle outState) {
 		// TODO Auto-generated method stub    	
     	outState.putInt("g_prevc",g_prevc);
     	outState.putInt("g_prevv",g_prevv);
-		super.onSaveInstanceState(outState);
+
+	save_read_pos();
+	super.onSaveInstanceState(outState);
 	}
+
+    public void	save_read_pos()
+    {
+	try
+	    {
+	String FILENAME = "read_pos.dat";	
+	FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+	DataOutputStream dos = new DataOutputStream(fos);
+	dos.writeInt(g_prevc);
+	dos.writeInt(g_prevv);
+	Log.d("qth_act","wrote 4 c:v "+g_prevc+":"+g_prevv);
+	dos.close();
+	fos.close();	
+	    }
+	catch(Exception e)
+	    {
+		Log.d("qth_act","write excep +"+e.toString());
+	    }
+    }
+
+    public void	get_read_pos()
+    {
+	try
+	    {
+	String FILENAME = "read_pos.dat";
+	FileInputStream fos = openFileInput(FILENAME);
+	DataInputStream dos = new DataInputStream(fos);
+	g_prevc = dos.readInt();
+	g_prevv = dos.readInt();
+	Log.d("qth_act","r 5 c:v"+g_prevc+":"+g_prevv);
+	dos.close();
+	fos.close();	
+	    }
+	catch(Exception e)
+	    {
+		Log.d("qth_act","read excep +"+e.toString());
+	    }
+    }
+
     
     public void init_sv()
     {
@@ -182,7 +233,7 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     public void display_verses(int c, int v, boolean forward) //starting with c,v
     {
     	//check if valid first
-    	if(!g_vl.does_verse_exist(c,v))
+    	if(!g_vl_th.does_verse_exist(c,v))
     	{
     		alert("ไม่พบ ซูเราะห์:อายะห์ "+c+":"+v+" ในฐานข้อมูล");
     		return;
@@ -195,32 +246,79 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     	
     	for(int i=0;i<NVERSEPERPAGE;i++)
     	{
-	    	TextView tv = new TextView(this);
-	    	tv.setTextSize(19);
+	    TextView tv_ar;
+	    if (android.os.Build.VERSION.SDK_INT < 11) {
+		tv_ar = null;
+	    } else {		
+		tv_ar = new TextView(this);	    
+		tv_ar.setTypeface(face_ar); 
+		tv_ar.setTextSize(TypedValue.COMPLEX_UNIT_SP,28);
+	    }
+		//tv_ar.setLineSpacing (0, (float) 1.5 );
+		//float tsx = tv_ar.getTextScaleX();
+		//tsx *= 2.0;
+		//tv_ar.setTextScaleX(tsx);
+
+
+	    	TextView tv_th = new TextView(this);
+		tv_th.setTextSize(TypedValue.COMPLEX_UNIT_SP,20);
+		tv_th.setTypeface(face_th); 
+
 	        try
 	        {
 	        	String s = null;
 	        	if(i==0)
-	        		s = g_vl.GotoVerse(c, v);
+	        		s = g_vl_th.GotoVerse(c, v);
 	        	else	        	
 	        	{
 	        		if(forward)
-	        			s= g_vl.GotoNextVerse();
+	        			s= g_vl_th.GotoNextVerse();
 	        		else
-	        			s= g_vl.GotoPreviousVerse();
+	        			s= g_vl_th.GotoPreviousVerse();
 	        	}
 	        	
 	        	if(s == null)
 	        	{	        		
 	        		break;
 	        	}
-	        	
-	        	tv.setText(s);
+
+			s += "\n__________";
+
+	        	tv_th.setText(s);
+
+			//add arabic
+			//thai arab universities alumni association's translation excludes bismillah except surah 1
+			int tc, tv;
+			tc = g_vl_th.chapter;			
+			tv = g_vl_th.verse;
+			
+			
+			/*if(tc == 1 || tc == 9)
+			  ;
+			else
+			    tv += 1;
+			*/
+
+			if(tv_ar != null) {
+			s = g_vl_ar.GotoVerse(tc, tv);
+			    if (s != null)
+				tv_ar.setText(s);
+			}
 	        	
 	        	if(forward)
-	        		ll.addView(tv);
+			    {
+				if(tv_ar != null)
+				    ll.addView(tv_ar);
+
+				ll.addView(tv_th);
+			    }
 	        	else
-	        		ll.addView(tv,0);
+			    {
+	        		ll.addView(tv_th,0);
+				
+				if(tv_ar != null) 
+				    ll.addView(tv_ar,0);
+			    }
 	        }
 	        catch(Exception e)
 	        {
@@ -231,11 +329,11 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     	if(!forward) //set as if we loaded forward from c,v behind
     	{
     		int tc, tv;
-    		tc = g_vl.chapter;
-    		tv = g_vl.verse;
+    		tc = g_vl_th.chapter;
+    		tv = g_vl_th.verse;
     		
-    		g_vl.chapter = g_prevc;
-    		g_vl.verse = g_prevv;
+    		g_vl_th.chapter = g_prevc;
+    		g_vl_th.verse = g_prevv;
     		
     		g_prevc = tc;
     		g_prevv = tv;		
@@ -246,7 +344,7 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     	else
     		ll.addView(ppb,0);//add prev button
     	
-    	if(g_vl.chapter == g_vl.NCHAPTERS && g_vl.verse == g_vl.GetNumberOfVerses(g_vl.NCHAPTERS))    	
+    	if(g_vl_th.chapter == g_vl_th.NCHAPTERS && g_vl_th.verse == g_vl_th.GetNumberOfVerses(g_vl_th.NCHAPTERS))    	
     		;//dont add next
     	else
     		ll.addView(npb);//add next button
@@ -272,7 +370,7 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     {
     	if(next)
     	{
-    		display_verses(g_vl.chapter,g_vl.verse,true);
+    		display_verses(g_vl_th.chapter,g_vl_th.verse,true);
     	}
     	else
     	{
@@ -290,16 +388,39 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     	Toast toast = Toast.makeText(context, text, duration);
     	toast.show();    	
     }
+
+    public void alert_long(String s)
+    {
+    	Context context = getApplicationContext();
+    	CharSequence text = s;
+    	int duration = Toast.LENGTH_LONG;
+    	Toast toast = Toast.makeText(context, text, duration);
+    	toast.show();    	
+    }
+
     
     @Override
+    public void onDestroy ()
+    {
+	super.onDestroy();
+	save_read_pos();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
+
+	if(savedInstanceState == null)
+	    get_read_pos();
         
         //////////////////////NEW CODE - LONG VERTICAL LIST
         //http://www.dreamincode.net/forums/topic/130521-android-part-iii-dynamic-layouts/
         try
         {
-        g_vl = new VerseLoader(this);
+	    g_vl_th = new VerseLoader(this,"data_th");
+	    g_vl_ar = new VerseLoader(this,"data_ar");
+	    g_vl_ar.skip_verse_num = true;
         }
         catch(Exception e)
         {
@@ -316,18 +437,39 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
         }
         else
         {
-            //TODO: load ch,verse saved from file
-        	g_prevc = 1;
-        	g_prevv = 1;        	
+	    //do nothing - already loaded from get_read_pos(); above
         }
+
+	if(face_ar == null)
+	    face_ar = Typeface.createFromAsset(getAssets(), "fonts/DroidSansArabic.ttf"); 
+
+	if(face_th == null)
+	    face_th = Typeface.createFromAsset(getAssets(), "fonts/Waree.ttf"); 
+
+
+	try {
+	//////if we got intetnt to open chapter to overwrite the chapter and verse
+	Intent intent = getIntent();
+	short read_chap;
+	    read_chap = intent.getShortExtra("schap",(short) 0);	
+	    Log.d("qth_act","start_chap key in intent val "+read_chap);
+	    if(read_chap != 0)
+		{
+		    g_prevc = (int) read_chap;
+		    g_prevv = 1;
+		}
+	} catch (Exception e) {}
+
         display_verses(g_prevc,g_prevv,true);
         
         this.setContentView(sv);
-        
+
+	if (android.os.Build.VERSION.SDK_INT < 11)
+	    alert_long("โทรศัพท์นี้ไม่รองรับการแสดงอักษรอาหรับแบบติดกิน (ต้องการ Android 3.0 หรือใหม่กว่า)");
     }
 
     public void onClick(View v) {
-        if(g_vl != null)
+        if(g_vl_th != null)
         {
         	if(v == npb)
         	{
@@ -343,7 +485,8 @@ public class QuranTHAIActivity extends Activity implements ViewSwitcher.ViewFact
     public View makeView() {
         TextView t = new TextView(this);
         t.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        t.setTextSize(36);
+        t.setTextSize(40);	
+	//t.setTypeface(face); 
         t.setOnTouchListener(this);
         g_view = t;
         return t;

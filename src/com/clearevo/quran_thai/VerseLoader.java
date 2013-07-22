@@ -9,11 +9,13 @@ import java.io.InputStreamReader;
 import android.app.Activity;
 import android.content.Context;
 import android.widget.Toast;
+import android.util.Log;
 
 public class VerseLoader {
 	
     int chapter;
     int verse;    
+    boolean skip_verse_num;
     public short[] nverses_per_chapter;
     public long[] verseFinalCharPos;    
     public byte[] verseBytes;
@@ -25,7 +27,9 @@ public class VerseLoader {
     int g_out_text_len;
     
     Activity g_caller_act;
-    
+
+    public final String BISMILLAH = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
+    public final String BISMILLAH_NEWLINE = BISMILLAH + "\n";
     public void alert(String s)
     {
     	Context context = g_caller_act.getApplicationContext();
@@ -40,8 +44,12 @@ public class VerseLoader {
 		return g_caller_act.getAssets().open(fn);	
     }
     
-    VerseLoader(Activity caller_act) throws Exception
+    String data_folder = "";//to be set in constructor
+
+    VerseLoader(Activity caller_act,String data_folder) throws Exception
     {
+	this.data_folder = new String(data_folder);
+	skip_verse_num = false;
     	g_caller_act = caller_act;    	
     	chapter = 1;
     	verse = 1;    	
@@ -52,7 +60,7 @@ public class VerseLoader {
     	
     	//////////////////load n_verses per chapter
     	nverses_per_chapter = new short[NCHAPTERS];
-        String fn =  "data/nv.key";            
+        String fn =  data_folder+"/nv.key";            
         java.io.InputStream is = getResourceAsStream(fn);
         DataInputStream dis = new DataInputStream(is);
                 
@@ -74,7 +82,7 @@ public class VerseLoader {
         
                  
         ////////////////////////////////
-        fn =  "data/t.dat";            
+        fn =  data_folder+"/t.dat";            
         is = getResourceAsStream(fn);
         dis = new DataInputStream(is);
         
@@ -91,7 +99,7 @@ public class VerseLoader {
         ////////////////////////////////
 
         //////////////////////////////////
-        fn =  "data/endchar.key";   
+        fn =  data_folder+"/endchar.key";   
         //System.out    .println("db1");   
         is = getResourceAsStream(fn);
         //System.out    .println("db2");   
@@ -244,7 +252,7 @@ public synchronized String GotoVerse(int chapter, int verse) throws Exception
     endpos--; // of this, not start of next 
     
     
-    String startfn =  "data/";
+    String startfn =  data_folder+"/";
     int startFileIndex =(int) (pos/DATFILEMAXSIZE);
     startfn+=((startFileIndex)+1);            
     startfn+=".dat";
@@ -328,7 +336,7 @@ public synchronized String GotoVerse(int chapter, int verse) throws Exception
         
         is.close();
         
-        String endfn = "data/";
+        String endfn = data_folder+"/";
         endfn+=((endFileIndex)+1);            
         endfn+=".dat";
         is = getResourceAsStream(endfn);           
@@ -384,8 +392,31 @@ public synchronized String GotoVerse(int chapter, int verse) throws Exception
     
     this.chapter = chapter;
     this.verse = verse;
-    
-    return new String(g_out_verse_chars,0,g_out_text_len);
+ 
+    String ret = "";
+ 
+    if (skip_verse_num)	{
+	    int first_space_pos = -1;
+	    for(int i = 0; i<g_out_text_len; i++) {
+		if(g_out_verse_chars[i] == ' ') {
+		       first_space_pos = i;
+		       ret = new String(g_out_verse_chars,first_space_pos+1,g_out_text_len - (first_space_pos+1));
+		       break;
+		   }
+	    }
+	    if (ret.startsWith(BISMILLAH) && ret.length() > BISMILLAH.length())
+		{
+		    ret = BISMILLAH + "\n" + ret.substring(BISMILLAH.length());
+		}
+    } 
+    else {
+	ret = new String(g_out_verse_chars,0,g_out_text_len);
+	int iob = ret.indexOf(BISMILLAH);
+	if(iob > 0 && ret.length() > iob + BISMILLAH.length()) //dont add new line if thise verse only contains bismillah and ends
+	    ret = ret.replaceFirst(BISMILLAH,BISMILLAH_NEWLINE);
+    }
+
+    return ret;
 }
 	
 	
