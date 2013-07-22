@@ -17,7 +17,7 @@ import android.util.Log;
 public class QuranTHAIMenuActivity extends ListActivity {
  
     /*thai chapter list credit to http://www.alquran-thai.com */
-    static final String[] MENU = new String[] { "อ่านต่อจากคราวก่อน...", 
+    static final String[] MENU = new String[] { "อ่านต่อจากครั้งก่อน...", 
 						    "1	Al-Fatiha - อัลฟาติหะฮฺ",
 						    "2	Al-Baqarah - อัล-บะเกาะเราะฮฺ",
 						    "3	Al-i-Imron - อาละอิมรอน",
